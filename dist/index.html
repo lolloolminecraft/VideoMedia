@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#11161b">
+  <meta name="description" content="VideoMedia — твой уютный киносписок, фильмы, анимация и просмотр легально доступных видео в одном месте.">
+  <title>VideoMedia — твои истории в одном месте</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Главное меню">
+      <a class="brand" href="#home" aria-label="VideoMedia — на главную">
+        <span class="brand-icon"><svg viewBox="0 0 36 36" fill="none" aria-hidden="true"><rect x="4" y="6" width="28" height="24" rx="8" stroke="currentColor" stroke-width="2.6"/><path d="m14 12 10 6-10 6V12Z" fill="currentColor"/><path d="M8 7v22M28 7v22" stroke="currentColor" stroke-width="2" stroke-dasharray="3 4"/></svg></span>
+        <span>video<span class="brand-accent">media</span><small>твой киноуголок</small></span>
+      </a>
+
+      <div class="side-heading">МЕНЮ</div>
+      <nav class="side-menu" id="side-menu">
+        <button type="button" class="side-item active" data-route="home"><span class="side-icon" data-icon="house"></span>Главная</button>
+        <button type="button" class="side-item" data-route="catalog"><span class="side-icon" data-icon="grid"></span>Каталог</button>
+        <button type="button" class="side-item" data-route="planned"><span class="side-icon" data-icon="bookmark"></span>Запланировано <span class="side-count" id="sidebar-planned-count">0</span></button>
+        <button type="button" class="side-item" data-route="continue"><span class="side-icon" data-icon="clock"></span>Продолжить</button>
+      </nav>
+
+      <div class="side-heading side-heading-categories">КАТЕГОРИИ</div>
+      <nav class="side-menu category-menu" id="category-menu">
+        <button type="button" class="side-item" data-filter="film"><span class="category-dot" style="--dot:#e6b5a6"></span>Фильмы</button>
+        <button type="button" class="side-item" data-filter="cartoon"><span class="category-dot" style="--dot:#a9d6be"></span>Мультфильмы</button>
+        <button type="button" class="side-item" data-filter="anime"><span class="category-dot" style="--dot:#bdb2f5"></span>Аниме</button>
+        <button type="button" class="side-item" data-filter="series"><span class="category-dot" style="--dot:#e3d5a3"></span>Сериалы</button>
+      </nav>
+
+      <div class="sidebar-bottom">
+        <div class="sidebar-note"><span class="note-star">✦</span><strong>Собери свой вечер</strong><p>Добавляй интересное в список и возвращайся, когда захочется.</p></div>
+        <button type="button" class="sidebar-about" id="about-button"><span data-icon="info"></span> О проекте</button>
+      </div>
+    </aside>
+
+    <div class="main-layout">
+      <header class="topbar">
+        <div class="mobile-brand"><span class="mobile-brand-mark">▶</span>video<span>media</span></div>
+        <div class="topbar-location"><span class="eyebrow">ТВОЁ ПРОСТРАНСТВО</span><div class="topbar-title" id="topbar-title">Хорошего просмотра <span>✦</span></div></div>
+        <div class="topbar-actions">
+          <button type="button" class="search-trigger" id="search-trigger" aria-label="Найти фильм"><span data-icon="search"></span><span>Найти фильм, сериал, аниме...</span><kbd>/</kbd></button>
+          <button type="button" class="icon-button mobile-search" id="mobile-search" aria-label="Поиск"><span data-icon="search"></span></button>
+          <span class="profile-avatar" title="Ваш локальный профиль">V</span>
+        </div>
+      </header>
+
+      <main id="main-content">
+        <section class="hero-section" id="hero-section">
+          <div class="hero-copy">
+            <div class="hero-kicker"><span class="hero-kicker-mark">✦</span> ТВОЙ ТИХИЙ КИНОВЕЧЕР</div>
+            <h1>Хорошие истории<br><em>всегда под рукой.</em></h1>
+            <p>Ищи что посмотреть, сохраняй на потом и продолжай с того места, где остановился.</p>
+            <div class="hero-buttons">
+              <button type="button" class="button primary" id="hero-start"><span data-icon="play"></span> Смотреть сейчас</button>
+              <button type="button" class="button ghost" id="hero-catalog">Исследовать каталог <span data-icon="arrow"></span></button>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <div class="visual-card visual-card-back"><span class="visual-sun"></span><span class="visual-hills"></span></div>
+            <div class="visual-card visual-card-front"><span class="visual-moon"></span><span class="visual-trees"></span><span class="visual-play">▶</span></div>
+            <span class="hero-spark spark-one">✦</span><span class="hero-spark spark-two">✧</span>
+          </div>
+        </section>
+
+        <section class="section-container" id="planned-section">
+          <div class="section-header"><div><div class="section-overline">НЕ ПОТЕРЯЙ ИНТЕРЕСНОЕ</div><h2>Запланировано <span class="header-count" id="planned-count">0</span></h2></div><button type="button" class="text-action" id="open-catalog">+ Найти и добавить <span data-icon="arrow"></span></button></div>
+          <div class="planned-items" id="planned-items"></div>
+        </section>
+
+        <section class="section-container" id="catalog-section">
+          <div class="section-header"><div><div class="section-overline" id="catalog-overline">МОЖНО ПОСМОТРЕТЬ СЕЙЧАС</div><h2 id="catalog-heading">Открытая коллекция</h2></div><div class="chip-row" id="catalog-chips"><button class="chip selected" data-filter="all">Всё</button><button class="chip" data-filter="film">Фильмы</button><button class="chip" data-filter="cartoon">Мультфильмы</button><button class="chip" data-filter="series">Сериалы</button></div></div>
+          <div class="catalog-grid" id="catalog-grid"></div>
+          <div class="catalog-help"><span data-icon="sparkles"></span><div><strong>Не нашёл нужный фильм?</strong><p>Поиск умеет находить и другие названия для твоего списка. Полный просмотр доступен только там, где есть разрешённый источник видео.</p></div><button type="button" class="button outline small" id="catalog-search">Искать</button></div>
+        </section>
+
+        <section class="section-container player-section" id="player-section">
+          <div class="section-header player-heading"><div><div class="section-overline">УЮТНЫЙ КИНОЗАЛ</div><h2>Сейчас смотрим</h2></div><div class="player-status"><span class="online-dot"></span> Без подписки для открытых фильмов</div></div>
+          <div class="watch-grid">
+            <aside class="watch-queue" aria-label="Очередь просмотра"><div class="panel-title">В очереди <span id="queue-count"></span></div><div id="queue-items" class="queue-items"></div></aside>
+            <div class="watch-main"><div class="video-frame" id="video-frame"><div class="video-host" id="video-host"></div><div class="video-placeholder" id="video-placeholder"><span class="placeholder-icon" data-icon="play-circle"></span><strong>Выбери, что посмотреть</strong><p>Видео откроется здесь</p></div><div class="player-controls" id="player-controls" hidden><div class="seek-line"><input id="video-seek" type="range" min="0" max="1000" value="0" aria-label="Перемотка видео"></div><div class="controls-row"><button class="player-control" id="video-play" aria-label="Пауза"><span data-icon="pause"></span></button><button class="player-control" id="video-back" aria-label="Назад на 10 секунд"><span data-icon="rewind"></span></button><button class="player-control" id="video-forward" aria-label="Вперёд на 10 секунд"><span data-icon="forward"></span></button><span class="time-label" id="video-time">00:00 / 00:00</span><div class="controls-spacer"></div><button class="player-control" id="video-mute" aria-label="Выключить звук"><span data-icon="volume"></span></button><input id="video-volume" type="range" min="0" max="1" step="0.05" value="0.9" aria-label="Громкость"><button class="player-control speed-control" id="video-speed" aria-label="Скорость воспроизведения">1×</button><button class="player-control" id="video-audio" aria-label="Выбрать озвучку"><span data-icon="headphones"></span></button><button class="player-control" id="video-pip" aria-label="Картинка в картинке"><span data-icon="pip"></span></button><button class="player-control" id="video-fullscreen" aria-label="На весь экран"><span data-icon="maximize"></span></button></div></div><div class="audio-popover" id="audio-popover" hidden><strong>Звуковая дорожка</strong><button class="audio-option"><span data-icon="check"></span> Оригинальная</button><p>Других озвучек у этого видео нет. Если источник предоставит их, они появятся здесь.</p></div></div>
+              <div class="watch-details"><div><div class="watch-crumb" id="watch-type">Фильм • Открытая коллекция</div><h3 id="watch-title">Выбери фильм из коллекции</h3><p id="watch-description">Плеер поддерживает перемотку, скорость, громкость, полный экран, картинку в картинке и запоминает прогресс.</p></div><button class="button outline watch-add" id="watch-add" type="button"><span data-icon="bookmark"></span><span>В список</span></button></div>
+              <div class="watch-footnote" id="watch-footnote"><span data-icon="info"></span> Смотреть можно только доступные для показа видео. Озвучка зависит от источника.</div>
+            </div>
+            <aside class="episodes-panel" aria-label="Эпизоды или следующая очередь"><div class="panel-title" id="episodes-title">Смотреть дальше</div><div id="episodes-items" class="episode-items"></div></aside>
+          </div>
+        </section>
+
+        <footer><span>© 2026 VideoMedia</span><span>Никаких пиратских потоков. Видео показывают правообладатели и открытые источники.</span><button type="button" id="footer-about">Как это работает?</button></footer>
+      </main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="search-modal" hidden><div class="search-dialog" role="dialog" aria-modal="true" aria-labelledby="search-title"><div class="dialog-heading"><div><span class="section-overline">ПОИСК ПО НАЗВАНИЮ</span><h2 id="search-title">Что будем смотреть?</h2></div><button type="button" class="icon-button" id="close-search" aria-label="Закрыть поиск"><span data-icon="close"></span></button></div><div class="search-input-wrap"><span data-icon="search"></span><input id="search-input" type="search" autocomplete="off" placeholder="Например: Интерстеллар, Naruto, мультфильм..."><kbd>ESC</kbd></div><div class="search-meta" id="search-meta">Введи название — найдём фильм, мультфильм или сериал</div><div class="search-results" id="search-results"></div><div class="search-dialog-foot">Поиск: Apple iTunes и TVMaze. Отображение в каталоге не означает бесплатный полный просмотр.</div></div></div>
+  <div class="modal-backdrop" id="about-modal" hidden><div class="about-dialog" role="dialog" aria-modal="true" aria-labelledby="about-title"><button type="button" class="icon-button about-close" id="close-about" aria-label="Закрыть"><span data-icon="close"></span></button><span class="about-glyph">✦</span><h2 id="about-title">О VideoMedia</h2><p>Это удобное место, чтобы выбирать фильмы, мультфильмы, аниме и сериалы, вести список и продолжать просмотр.</p><div class="about-points"><p><span data-icon="check"></span> Список и прогресс сохраняются в этом браузере — без регистрации.</p><p><span data-icon="check"></span> Встроенный плеер играет фильмы с доступным разрешённым источником.</p><p><span data-icon="check"></span> У найденных через поиск названий не всегда есть бесплатная полная версия — их можно сохранить на потом.</p><p><span data-icon="check"></span> Контент открытой коллекции создан Blender Foundation. Видео воспроизводится с внешних серверов.</p></div><button type="button" class="button primary" id="about-done">Понятно</button></div></div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <nav class="mobile-nav" aria-label="Меню телефона"><button data-route="home" class="active"><span data-icon="house"></span>Главная</button><button data-route="catalog"><span data-icon="grid"></span>Каталог</button><button data-route="planned"><span data-icon="bookmark"></span>Мой список</button><button data-route="continue"><span data-icon="clock"></span>Смотрю</button></nav>
+  <script src="app.js" defer></script>
+</body>
+</html>

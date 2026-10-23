@@ -119,6 +119,12 @@ function queueIds() {
   return state.planned.filter(id => !state.completed[id] && byId.has(id));
 }
 
+function episodeDuration(item,index) {
+  const value = item?.episodes?.[index]?.duration;
+  const parts = value?.split(':').map(Number);
+  return parts?.length === 2 && parts.every(Number.isFinite) ? parts[0]*60+parts[1] : 0;
+}
+
 function renderPlanned() {
   const items = $('planned-items');
   $('planned-count').textContent = state.planned.length;
@@ -132,7 +138,8 @@ function renderPlanned() {
     const done = !!state.completed[item.id];
     const progress = state.progress[item.id];
     const episodeLabel = progress?.episode != null && item.type === 'series' ? ` · серия ${progress.episode + 1}` : '';
-    const rest = progress?.seconds > 0 ? ` · ${formatTime(progress.seconds)}` : '';
+    const validSeconds = progress?.seconds > 0 && (!item.episodes || !episodeDuration(item,progress.episode) || progress.seconds < episodeDuration(item,progress.episode)-2);
+    const rest = validSeconds ? ` · ${formatTime(progress.seconds)}` : '';
     return `<article class="planned-card ${done ? 'is-complete' : ''}"><button type="button" class="check-circle ${done ? 'complete' : ''}" data-action="complete" data-id="${escapeHtml(item.id)}" aria-label="${done ? 'Вернуть в планы' : 'Отметить просмотренным'}">${done ? icon('check') : ''}</button><div class="planned-cover">${posterImage(item,'planned-cover')}</div><div class="planned-body"><h3 class="planned-card-title" title="${escapeHtml(item.title)}">${escapeHtml(item.title)}</h3><div class="planned-sub">${escapeHtml(typeLabels[item.type] || 'Видео')}${episodeLabel}${rest}</div><div class="planned-bottom"><button class="mini-link" data-action="watch" data-id="${escapeHtml(item.id)}">${item.video || item.episodes ? 'Смотреть' : 'Подробнее'}</button><button class="mini-icon" data-action="remove" data-id="${escapeHtml(item.id)}" aria-label="Убрать из списка">${icon('close')}</button></div></div></article>`;
   }).join('');
 }
@@ -205,7 +212,8 @@ function saveProgress() {
     try {
       const seconds = youtubePlayer.getCurrentTime();
       if (Number.isFinite(seconds) && seconds > 0) {
-        state.progress[state.selected] = {seconds:Math.floor(seconds),episode:state.episodeIndex,updated:Date.now()};
+        const duration = youtubePlayer.getDuration?.() || episodeDuration(mediaById(state.selected),state.episodeIndex);
+        state.progress[state.selected] = {seconds:duration > 0 && seconds >= duration-1 ? 0 : Math.floor(seconds),episode:state.episodeIndex,updated:Date.now()};
         persist('progress',state.progress);
       }
     } catch {}
@@ -249,7 +257,8 @@ function trackYoutube(frame,item,episodeIndex) {
         onReady:event => {
           if (generation !== youtubeGeneration) return;
           const saved = state.progress[item.id];
-          if (saved?.episode === episodeIndex && saved.seconds > 1) {
+          const duration = event.target.getDuration?.() || episodeDuration(item,episodeIndex);
+          if (saved?.episode === episodeIndex && saved.seconds > 1 && (!duration || saved.seconds < duration-2)) {
             try { event.target.seekTo(saved.seconds,true); } catch {}
           }
           youtubeTimer = setInterval(() => {

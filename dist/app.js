@@ -35,7 +35,7 @@ function escapeHtml(value) {
 function safeImage(url) {
   try {
     const value = new URL(url);
-    return value.protocol === 'https:' && ['storage.googleapis.com','img.youtube.com','is1-ssl.mzstatic.com','is2-ssl.mzstatic.com','is3-ssl.mzstatic.com','is4-ssl.mzstatic.com','is5-ssl.mzstatic.com','static.tvmaze.com'].includes(value.hostname) ? value.href : '';
+    return value.protocol === 'https:' && ['storage.googleapis.com','img.youtube.com','upload.wikimedia.org','is1-ssl.mzstatic.com','is2-ssl.mzstatic.com','is3-ssl.mzstatic.com','is4-ssl.mzstatic.com','is5-ssl.mzstatic.com','static.tvmaze.com'].includes(value.hostname) ? value.href : '';
   } catch { return ''; }
 }
 
@@ -93,6 +93,10 @@ const state = {
 
 const $ = id => document.getElementById(id);
 let currentVideo = null;
+let youtubePlayer = null;
+let youtubeTimer = null;
+let youtubeGeneration = 0;
+let youtubeApiPromise = null;
 let toastTimer;
 let searchTimer;
 let saveTime = 0;
@@ -197,9 +201,65 @@ function syncControls() {
 }
 
 function saveProgress() {
+  if (youtubePlayer && typeof youtubePlayer.getCurrentTime === 'function') {
+    try {
+      const seconds = youtubePlayer.getCurrentTime();
+      if (Number.isFinite(seconds) && seconds > 0) {
+        state.progress[state.selected] = {seconds:Math.floor(seconds),episode:state.episodeIndex,updated:Date.now()};
+        persist('progress',state.progress);
+      }
+    } catch {}
+    return;
+  }
   if (!currentVideo || !Number.isFinite(currentVideo.currentTime) || currentVideo.currentTime < 1) return;
   state.progress[state.selected] = {seconds:Math.floor(currentVideo.currentTime),episode:state.episodeIndex,updated:Date.now()};
   persist('progress',state.progress);
+}
+
+function ensureYoutubeApi() {
+  if (window.YT?.Player) return Promise.resolve(window.YT);
+  if (youtubeApiPromise) return youtubeApiPromise;
+  youtubeApiPromise = new Promise((resolve,reject) => {
+    window.onYouTubeIframeAPIReady = () => resolve(window.YT);
+    const script = document.createElement('script');
+    script.src = 'https://www.youtube.com/iframe_api';
+    script.async = true;
+    script.onerror = () => reject(new Error('YouTube API unavailable'));
+    document.head.append(script);
+  });
+  return youtubeApiPromise;
+}
+
+function releaseYoutube() {
+  clearInterval(youtubeTimer);
+  youtubeTimer = null;
+  youtubeGeneration++;
+  if (youtubePlayer) {
+    try { youtubePlayer.destroy(); } catch {}
+    youtubePlayer = null;
+  }
+}
+
+function trackYoutube(frame,item,episodeIndex) {
+  const generation = youtubeGeneration;
+  ensureYoutubeApi().then(YT => {
+    if (generation !== youtubeGeneration || !frame.isConnected) return;
+    youtubePlayer = new YT.Player(frame.id,{
+      events:{
+        onReady:event => {
+          if (generation !== youtubeGeneration) return;
+          const saved = state.progress[item.id];
+          if (saved?.episode === episodeIndex && saved.seconds > 1) {
+            try { event.target.seekTo(saved.seconds,true); } catch {}
+          }
+          youtubeTimer = setInterval(() => {
+            if (generation !== youtubeGeneration) { clearInterval(youtubeTimer); return; }
+            saveProgress();
+          },2200);
+        }
+      }
+    });
+  }).catch(() => {});
 }
 
 function showUnavailable(item, error = false) {
@@ -211,6 +271,7 @@ function showUnavailable(item, error = false) {
 }
 
 function attachVideo(item) {
+  releaseYoutube();
   if (currentVideo) {
     currentVideo.pause();
     currentVideo = null;
@@ -222,12 +283,14 @@ function attachVideo(item) {
   if (item.episodes || item.video?.kind === 'youtube') {
     const episode = item.episodes ? item.episodes[state.episodeIndex] : {youtube:item.video.id,name:item.title};
     const frame = document.createElement('iframe');
-    frame.src = `https://www.youtube-nocookie.com/embed/${episode.youtube}?rel=0&playsinline=1`;
+    frame.id = 'videomedia-youtube';
+    frame.src = `https://www.youtube-nocookie.com/embed/${episode.youtube}?rel=0&playsinline=1&enablejsapi=1&origin=${encodeURIComponent(location.origin)}`;
     frame.title = `${item.title}: ${episode.name}`;
     frame.referrerPolicy = 'strict-origin-when-cross-origin';
     frame.allow = 'accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture; web-share';
     frame.allowFullscreen = true;
     $('video-host').append(frame);
+    trackYoutube(frame,item,state.episodeIndex);
     return;
   }
   if (!item.video || !safeVideo(item.video.src)) {
@@ -263,10 +326,14 @@ function attachVideo(item) {
 function openMedia(id,scroll=true,episode=null) {
   const item = mediaById(id);
   if (!item) return;
-  if (currentVideo) saveProgress();
+  if (currentVideo || youtubePlayer) saveProgress();
   state.selected = id;
   if (episode !== null) state.episodeIndex = episode;
   else state.episodeIndex = item.episodes ? Math.min(item.episodes.length-1,Math.max(0,Number(state.progress[id]?.episode) || 0)) : 0;
+  if (item.episodes && (episode !== null || !state.progress[id])) {
+    state.progress[id] = {seconds:episode !== null ? 0 : state.progress[id]?.seconds || 0,episode:state.episodeIndex,updated:Date.now()};
+    persist('progress',state.progress);
+  }
   renderWatchDetails();
   renderEpisodes();
   renderQueue();
@@ -357,6 +424,22 @@ function normalizeMaze(item) {
   return {id:`maze_${show.id}`,title:show.name,original:show.name,type:/anime/i.test(show.genres?.join(' ') || '') ? 'anime' : 'series',year:show.premiered ? new Date(show.premiered).getFullYear() : '',duration:show.runtime ? `${show.runtime} мин/серия` : 'Сериал',genre:show.genres?.join(' · ') || 'Сериал',description:description || 'Найдено в каталоге TVMaze. Бесплатный источник полного видео не указан.',poster:safeImage(show.image?.medium || show.image?.original || ''),video:null,credit:'TVMaze'};
 }
 
+function normalizeWiki(item,lang) {
+  if (!item?.pageid || !item.title) return null;
+  if (/^(?:список|фильмография|list of|filmography)|soundtrack|саундтрек|награды|awards|album|музыка к/i.test(item.title)) return null;
+  const description = (item.extract || '').replace(/\s+/g,' ').trim();
+  const text = `${item.title} ${description}`.toLowerCase();
+  if (!/film|movie|television series|tv series|anime|animated|фильм|кинофильм|сериал|аниме|мультфильм|мультипликац|анимационн/.test(text)) return null;
+  const type = /anime|аниме/.test(text) ? 'anime' : /телесериал|телевизионный сериал|television series|tv series|miniseries/.test(text) ? 'series' : /мультфильм|animated film|анимационн|мультипликац/.test(text) ? 'cartoon' : 'film';
+  const match = description.match(/(?:19|20)\d{2}/);
+  return {id:`wiki_${lang}_${item.pageid}`,title:item.title,original:item.title,type,year:match ? Number(match[0]) : '',duration:'В каталоге',genre:typeLabels[type],description:description.slice(0,750) || 'Название из энциклопедического каталога. Источник полного фильма не указан.',poster:safeImage(item.thumbnail?.source || ''),video:null,credit:`Wikipedia (${lang})`};
+}
+
+function wikiSearch(query,lang,signal) {
+  const params = new URLSearchParams({action:'query',format:'json',formatversion:'2',generator:'search',gsrsearch:query,gsrnamespace:'0',gsrlimit:'12',prop:'pageimages|extracts',piprop:'thumbnail',pithumbsize:'400',exintro:'1',explaintext:'1',exsentences:'2',origin:'*'});
+  return fetch(`https://${lang}.wikipedia.org/w/api.php?${params}`,{signal}).then(response => {if (!response.ok) throw new Error('Wikipedia');return response.json();}).then(json => (json.query?.pages || []).map(item => normalizeWiki(item,lang)).filter(Boolean));
+}
+
 async function runSearch(query) {
   const cleaned = query.trim();
   if (!cleaned) { state.searchResults=[];$('search-meta').textContent='Введи название — найдём фильм, мультфильм или сериал';renderSearchResults();return; }
@@ -369,7 +452,9 @@ async function runSearch(query) {
   let networkFailed = false;
   const results = await Promise.allSettled([
     fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(cleaned)}&entity=movie&limit=20&country=us`,{signal:state.searchAbort.signal}).then(response => { if (!response.ok) throw new Error('Apple'); return response.json(); }).then(json => (json.results || []).map(normalizeApple).filter(Boolean)),
-    fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleaned)}`,{signal:state.searchAbort.signal}).then(response => { if (!response.ok) throw new Error('TVMaze'); return response.json(); }).then(json => json.slice(0,15).map(normalizeMaze).filter(Boolean))
+    fetch(`https://api.tvmaze.com/search/shows?q=${encodeURIComponent(cleaned)}`,{signal:state.searchAbort.signal}).then(response => { if (!response.ok) throw new Error('TVMaze'); return response.json(); }).then(json => json.slice(0,15).map(normalizeMaze).filter(Boolean)),
+    wikiSearch(cleaned,'ru',state.searchAbort.signal),
+    wikiSearch(cleaned,'en',state.searchAbort.signal)
   ]);
   if (request !== state.searchRequest || $('search-modal').hidden) return;
   networkFailed = results.every(result => result.status === 'rejected');

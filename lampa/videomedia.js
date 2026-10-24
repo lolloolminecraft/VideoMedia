@@ -308,25 +308,28 @@
             var currentCategory = category;
             var serial = ++requestSerial;
             var path = currentQuery ? 'search/multi?query=' + encodeURIComponent(currentQuery) : CATEGORIES.find(function (item) { return item.id === currentCategory; }).path;
-            api.get(path, { page: currentPage }, function (data) {
-                if (!alive || page !== 'catalog' || serial !== requestSerial || currentPage !== mediaPage || currentQuery !== query || currentCategory !== category) return;
-                loading = false;
-                var list = Array.isArray(data && data.results) ? data.results : [];
-                list.forEach(function (item) {
-                    var saved = safeMovie(item);
-                    if (saved && !results.some(function (x) { return movieKey(x) === movieKey(saved); })) results.push(saved);
-                });
-                ended = !list.length || (data.total_pages && currentPage >= data.total_pages);
-                mediaPage++;
-                showCatalog();
-                restoreFocus();
-            }, function () {
+            function failed() {
                 if (!alive || serial !== requestSerial || currentPage !== mediaPage) return;
                 loading = false;
                 ended = true;
                 showCatalog();
                 notify('Не удалось загрузить каталог. Проверьте источник данных Lampa.');
-            });
+            }
+            try {
+                api.get(path, { page: currentPage }, function (data) {
+                    if (!alive || page !== 'catalog' || serial !== requestSerial || currentPage !== mediaPage || currentQuery !== query || currentCategory !== category) return;
+                    loading = false;
+                    var list = Array.isArray(data && data.results) ? data.results : [];
+                    list.forEach(function (item) {
+                        var saved = safeMovie(item);
+                        if (saved && !results.some(function (x) { return movieKey(x) === movieKey(saved); })) results.push(saved);
+                    });
+                    ended = !list.length || (data.total_pages && currentPage >= data.total_pages);
+                    mediaPage++;
+                    showCatalog();
+                    restoreFocus();
+                }, failed);
+            } catch (e) { failed(); }
         }
 
         function plannedPage() {
@@ -452,7 +455,8 @@
             else if (page === 'catalog') showCatalog();
             else if (page === 'planned') plannedPage();
             else watch();
-            if (L.Controller && L.Controller.enabled && L.Controller.enabled().name === 'content') restoreFocus();
+            var active = L.Controller && L.Controller.enabled ? L.Controller.enabled() : null;
+            if (active && active.name === 'content') restoreFocus();
         }
 
         this.create = function () {
